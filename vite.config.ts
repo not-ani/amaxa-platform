@@ -3,11 +3,10 @@ import tsConfigPaths from 'vite-tsconfig-paths';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import * as dotenv from 'dotenv';
+import { nitro } from 'nitro/vite';
 
 // Load .env.local (TanStack Start/Vite convention)
 dotenv.config({ path: '.env.local', quiet: true });
-// Also load .env as fallback
-dotenv.config({ quiet: true });
 
 export default defineConfig({
   server: {
@@ -19,5 +18,6 @@ export default defineConfig({
     }),
     tanstackStart(),
     viteReact(),
+    nitro(),
   ],
 });

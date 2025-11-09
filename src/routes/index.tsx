@@ -20,6 +20,7 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const { user, signInUrl, signUpUrl } = Route.useLoaderData();
+  console.log(user)
   return <HomeContent user={user} signInUrl={signInUrl} signUpUrl={signUpUrl} />;
 }
 
@@ -33,6 +34,7 @@ function HomeContent({ user, signInUrl, signUpUrl }: { user: User | null; signIn
       <main className="p-8 flex flex-col gap-8">
         <h1 className="text-4xl font-bold text-center">Convex + TanStack Start + WorkOS</h1>
         <Authenticated>
+          hi
           <Content />
         </Authenticated>
         <Unauthenticated>
