@@ -1,11 +1,12 @@
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
+/// <reference types="vite/client" />
+import type { ConvexQueryClient } from '@convex-dev/react-query';
+import type { QueryClient } from '@tanstack/react-query';
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getAuth } from '@workos/authkit-tanstack-react-start';
-import appCssUrl from '../app.css?url';
-import type { QueryClient } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 import type { ConvexReactClient } from 'convex/react';
-import type { ConvexQueryClient } from '@convex-dev/react-query';
+import type { ReactNode } from 'react';
+import appCssUrl from '../app.css?url';
 
 const fetchWorkosAuth = createServerFn({ method: 'GET' }).handler(async () => {
   const auth = await getAuth();
@@ -32,12 +33,12 @@ export const Route = createRootRouteWithContext<{
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Convex + TanStack Start + WorkOS AuthKit',
+        title: 'Amaxa Platform',
       },
     ],
     links: [
-      { rel: 'stylesheet', href: appCssUrl },
       { rel: 'icon', href: '/convex.svg' },
+      { rel: 'stylesheet', href: appCssUrl },
     ],
   }),
   component: RootComponent,

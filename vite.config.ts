@@ -20,4 +20,10 @@ export default defineConfig({
     viteReact(),
     nitro(),
   ],
+  optimizeDeps: {
+    include: ['cookie'],
+  },
+  ssr: {
+    noExternal: ['cookie'],
+  },
 });

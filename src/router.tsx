@@ -2,10 +2,11 @@ import { createRouter } from '@tanstack/react-router';
 import { ConvexQueryClient } from '@convex-dev/react-query';
 import { QueryClient } from '@tanstack/react-query';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
-import { ConvexProvider, ConvexProviderWithAuth, ConvexReactClient } from 'convex/react';
+import { ConvexProviderWithAuth, ConvexReactClient } from 'convex/react';
 import { AuthKitProvider, useAccessToken, useAuth } from '@workos/authkit-tanstack-react-start/client';
 import { useCallback, useMemo } from 'react';
 import { routeTree } from './routeTree.gen';
+import { ThemeProvider } from './components/themes';
 
 export function getRouter() {
   const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!;
@@ -36,9 +37,11 @@ export function getRouter() {
     context: { queryClient, convexClient: convex, convexQueryClient },
     Wrap: ({ children }) => (
       <AuthKitProvider>
-        <ConvexProviderWithAuth client={convexQueryClient.convexClient} useAuth={useAuthFromWorkOS}>
-          {children}
-        </ConvexProviderWithAuth>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <ConvexProviderWithAuth client={convexQueryClient.convexClient} useAuth={useAuthFromWorkOS}>
+            {children}
+          </ConvexProviderWithAuth>
+        </ThemeProvider>
       </AuthKitProvider>
     ),
   });

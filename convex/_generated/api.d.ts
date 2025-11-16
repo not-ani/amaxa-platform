@@ -8,7 +8,11 @@
  * @module
  */
 
-import type * as myFunctions from "../myFunctions.js";
+import type * as edges from "../edges.js";
+import type * as projects from "../projects.js";
+import type * as reactFlowExample from "../reactFlowExample.js";
+import type * as tasks from "../tasks.js";
+import type * as userToProject from "../userToProject.js";
 
 import type {
   ApiFromModules,
@@ -25,7 +29,11 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  myFunctions: typeof myFunctions;
+  edges: typeof edges;
+  projects: typeof projects;
+  reactFlowExample: typeof reactFlowExample;
+  tasks: typeof tasks;
+  userToProject: typeof userToProject;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
