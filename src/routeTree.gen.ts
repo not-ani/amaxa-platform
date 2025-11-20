@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as ApiListUsersRouteImport } from './routes/api/list-users'
 import { Route as AuthenticatedAuthenticatedRouteImport } from './routes/_authenticated/authenticated'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedProjectProjectIdRouteRouteImport } from './routes/_authenticated/project/$projectId/route'
@@ -33,6 +34,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiListUsersRoute = ApiListUsersRouteImport.update({
+  id: '/api/list-users',
+  path: '/api/list-users',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAuthenticatedRoute =
   AuthenticatedAuthenticatedRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/callback': typeof CallbackRoute
   '/app': typeof AuthenticatedAppRoute
   '/authenticated': typeof AuthenticatedAuthenticatedRoute
+  '/api/list-users': typeof ApiListUsersRoute
   '/': typeof AuthenticatedIndexRoute
   '/project/$projectId': typeof AuthenticatedProjectProjectIdRouteRouteWithChildren
   '/project/$projectId/settings': typeof AuthenticatedProjectProjectIdSettingsRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/callback': typeof CallbackRoute
   '/app': typeof AuthenticatedAppRoute
   '/authenticated': typeof AuthenticatedAuthenticatedRoute
+  '/api/list-users': typeof ApiListUsersRoute
   '/': typeof AuthenticatedIndexRoute
   '/project/$projectId/settings': typeof AuthenticatedProjectProjectIdSettingsRoute
   '/project/$projectId/tasks': typeof AuthenticatedProjectProjectIdTasksRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/callback': typeof CallbackRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/authenticated': typeof AuthenticatedAuthenticatedRoute
+  '/api/list-users': typeof ApiListUsersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/project/$projectId': typeof AuthenticatedProjectProjectIdRouteRouteWithChildren
   '/_authenticated/project/$projectId/settings': typeof AuthenticatedProjectProjectIdSettingsRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/app'
     | '/authenticated'
+    | '/api/list-users'
     | '/'
     | '/project/$projectId'
     | '/project/$projectId/settings'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/app'
     | '/authenticated'
+    | '/api/list-users'
     | '/'
     | '/project/$projectId/settings'
     | '/project/$projectId/tasks'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/_authenticated/app'
     | '/_authenticated/authenticated'
+    | '/api/list-users'
     | '/_authenticated/'
     | '/_authenticated/project/$projectId'
     | '/_authenticated/project/$projectId/settings'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   CallbackRoute: typeof CallbackRoute
+  ApiListUsersRoute: typeof ApiListUsersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -173,6 +186,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/list-users': {
+      id: '/api/list-users'
+      path: '/api/list-users'
+      fullPath: '/api/list-users'
+      preLoaderRoute: typeof ApiListUsersRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/authenticated': {
       id: '/_authenticated/authenticated'
@@ -272,6 +292,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   CallbackRoute: CallbackRoute,
+  ApiListUsersRoute: ApiListUsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

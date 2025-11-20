@@ -7,6 +7,7 @@ import { AuthKitProvider, useAccessToken, useAuth } from '@workos/authkit-tansta
 import { useCallback, useMemo } from 'react';
 import { routeTree } from './routeTree.gen';
 import { ThemeProvider } from './components/themes';
+import { Toaster } from 'sonner';
 
 export function getRouter() {
   const CONVEX_URL = (import.meta as any).env.VITE_CONVEX_URL!;
@@ -40,6 +41,7 @@ export function getRouter() {
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
           <ConvexProviderWithAuth client={convexQueryClient.convexClient} useAuth={useAuthFromWorkOS}>
             {children}
+            <Toaster position="top-right" richColors />
           </ConvexProviderWithAuth>
         </ThemeProvider>
       </AuthKitProvider>

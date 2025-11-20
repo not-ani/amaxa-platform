@@ -1,10 +1,10 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query';
 import { Button } from '@/components/ui/button';
 import { api } from '@convex/_generated/api';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useBlocker } from '@tanstack/react-router';
 import type { Id } from '@convex/_generated/dataModel';
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query';
-import { memo, useCallback, useMemo, useEffect } from 'react';
+import { memo, useCallback, useMemo, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -25,6 +25,7 @@ import xyFlow from '@xyflow/react/dist/base.css?url';
 import { TaskNode } from '@/components/dashboard/sidebar/TaskNode';
 import type { TaskNodeData } from '@/components/dashboard/sidebar/TaskNode';
 import { useDashboardContext } from '@/components/dashboard/context';
+import { toast } from 'sonner';
 
 export const Route = createFileRoute('/_authenticated/project/$projectId/tasks')({
   loader: async ({ context, params }) => {
@@ -51,12 +52,21 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const { userRole } = useDashboardContext();
 
+  const [isDirty, setIsDirty] = useState(false);
   const { data: project } = useSuspenseQuery(convexQuery(api.projects.get, { projectId }));
   const { data: convexNodes } = useSuspenseQuery(convexQuery(api.tasks.listForProject, { projectId }));
   const { data: convexEdges } = useSuspenseQuery(convexQuery(api.edges.listForProject, { projectId }));
 
   const replaceGraph = useConvexMutation(api.graph.replaceProjectGraph);
 
+  useBlocker({
+    shouldBlockFn: () => {
+      if (!isDirty) return false
+
+      const shouldLeave = confirm('You have unsaved changes. Are you sure you want to leave?')
+      return !shouldLeave
+    },
+  });
   // Initialize local state from server data
   const initialNodes = useMemo(() => (convexNodes || []) as Node[], [convexNodes]);
   const initialEdges = useMemo(() => (convexEdges || []) as Edge[], [convexEdges]);
@@ -64,6 +74,7 @@ function RouteComponent() {
   // Use React Flow's state management hooks
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
 
   // Sync local state when server data changes
   useEffect(() => {
@@ -81,6 +92,7 @@ function RouteComponent() {
   // Local-only handlers (no mutations)
   const onConnect = useCallback(
     (connection: Connection) => {
+      setIsDirty(true);
       if (connection.source && connection.target) {
         setEdges((eds) => addEdge(connection, eds));
       }
@@ -91,6 +103,7 @@ function RouteComponent() {
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       // Position updates are handled by onNodesChange, but we can explicitly update if needed
+      setIsDirty(true);
       setNodes((nds) =>
         nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
       );
@@ -116,6 +129,7 @@ function RouteComponent() {
     };
 
     setNodes((nds) => [...nds, newNode]);
+    setIsDirty(true);
   }, [nodes.length, setNodes]);
 
   // Save handler - replaces entire graph
@@ -141,16 +155,9 @@ function RouteComponent() {
       })),
     });
 
-    // Invalidate queries to refresh data
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: convexQuery(api.tasks.listForProject, { projectId }).queryKey,
-      }),
-      queryClient.invalidateQueries({
-        queryKey: convexQuery(api.edges.listForProject, { projectId }).queryKey,
-      }),
-    ]);
-  }, [nodes, edges, projectId, replaceGraph, queryClient]);
+    setIsDirty(false);
+    toast.success('Graph saved successfully');
+  }, [nodes, edges, projectId, replaceGraph]);
 
   // Inject onUpdate callback into node data for TaskNode
   const nodesForRender = useMemo(
@@ -160,6 +167,7 @@ function RouteComponent() {
         data: {
           ...(n.data as TaskNodeData),
           onUpdate: (nextData: TaskNodeData) => {
+            setIsDirty(true);
             setNodes((nds) =>
               nds.map((x) => (x.id === n.id ? { ...x, data: nextData } : x))
             );
@@ -184,14 +192,16 @@ function RouteComponent() {
             <Button
               type="button"
               onClick={addNewTask}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 "
+              variant="outline"
             >
               Add Task
             </Button>
             <Button
               type="button"
+              disabled={!isDirty}
               onClick={handleSave}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              className="px-4 py-2 "
             >
               Save
             </Button>
