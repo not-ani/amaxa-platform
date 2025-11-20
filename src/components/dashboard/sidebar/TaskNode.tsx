@@ -12,10 +12,10 @@ export type TaskNodeData = {
 };
 
 const statusColors = {
-  todo: 'bg-gray-100 border-gray-300',
-  in_progress: 'bg-blue-50 border-blue-400',
-  completed: 'bg-green-50 border-green-400',
-  blocked: 'bg-red-50 border-red-400',
+  todo: 'bg-card text-card-foreground',
+  in_progress: 'bg-blue-50 dark:bg-blue-900 border-blue-400 dark:border-blue-600 text-foreground',
+  completed: 'bg-green-50 dark:bg-green-900 border-green-400 dark:border-green-600 text-foreground',
+  blocked: 'bg-red-50 dark:bg-red-900 border-red-400 dark:border-red-600 text-foreground',
 };
 
 const priorityColors = {

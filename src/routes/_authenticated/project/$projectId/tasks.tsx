@@ -264,6 +264,7 @@ const TasksGraph = memo(function TasksGraph({
         proOptions={proOptions}
         snapToGrid
         snapGrid={snapGrid}
+        colorMode='dark'
       >
         <Background />
         <Controls />
