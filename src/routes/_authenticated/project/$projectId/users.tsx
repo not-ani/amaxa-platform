@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_authenticated/project/$projectId/users')
   loader: async ({ context, params }) => {
     const projectId = params.projectId as Id<'projects'>;
     await context.queryClient.ensureQueryData(convexQuery(api.userToProject.listUsersForProject, { projectId }));
-    // /api/list-users returns the underlying users array (WorkOS AutoPaginatable.data)
+    
     const allUsers = (await fetch('/api/list-users').then((res) => res.json())) as User[];
     return { allUsers };
   },
@@ -34,7 +34,7 @@ function RouteComponent() {
 
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
-  // Get existing user IDs to filter them out in the form
+  
   const existingUserIds = existingUsers.map((user) => user.userId);
 
   const handleRemoveUser = async (userId: string) => {

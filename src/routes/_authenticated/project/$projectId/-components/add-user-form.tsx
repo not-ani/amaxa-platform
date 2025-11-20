@@ -60,7 +60,7 @@ export function AddUserForm({
   console.log(allUsers);
 
 
-  // Filter out users that are already in the project
+  
   const availableUsers = React.useMemo(() => {
     return allUsers
       .filter((user) => !existingUserIds?.includes(user.id))
@@ -101,7 +101,7 @@ export function AddUserForm({
     },
   });
 
-  // Reset form when dialog closes
+  
   React.useEffect(() => {
     if (!open) {
       form.reset();

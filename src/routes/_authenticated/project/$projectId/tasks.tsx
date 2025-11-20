@@ -67,16 +67,16 @@ function RouteComponent() {
       return !shouldLeave
     },
   });
-  // Initialize local state from server data
+  
   const initialNodes = useMemo(() => (convexNodes || []) as Node[], [convexNodes]);
   const initialEdges = useMemo(() => (convexEdges || []) as Edge[], [convexEdges]);
 
-  // Use React Flow's state management hooks
+  
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
 
-  // Sync local state when server data changes
+  
   useEffect(() => {
     if (convexNodes) {
       setNodes(convexNodes as Node[]);
@@ -89,7 +89,7 @@ function RouteComponent() {
     }
   }, [convexEdges, setEdges]);
 
-  // Local-only handlers (no mutations)
+  
   const onConnect = useCallback(
     (connection: Connection) => {
       setIsDirty(true);
@@ -102,7 +102,7 @@ function RouteComponent() {
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      // Position updates are handled by onNodesChange, but we can explicitly update if needed
+      
       setIsDirty(true);
       setNodes((nds) =>
         nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
@@ -132,7 +132,7 @@ function RouteComponent() {
     setIsDirty(true);
   }, [nodes.length, setNodes]);
 
-  // Save handler - replaces entire graph
+  
   const handleSave = useCallback(async () => {
     await replaceGraph({
       projectId,
@@ -159,7 +159,7 @@ function RouteComponent() {
     toast.success('Graph saved successfully');
   }, [nodes, edges, projectId, replaceGraph]);
 
-  // Inject onUpdate callback into node data for TaskNode
+  
   const nodesForRender = useMemo(
     () =>
       nodes.map((n) => ({
@@ -177,7 +177,7 @@ function RouteComponent() {
     [nodes, setNodes],
   );
 
-  // Stable objects to prevent unnecessary re-renders
+  
   const layoutStyle = useMemo(
     () => ({ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' as const }),
     [],
