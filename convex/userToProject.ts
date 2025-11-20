@@ -1,18 +1,22 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireAuth, assertUserIsCoach } from './permissions';
 
 /**
  * Assign a user to a project with a role
+ * Requires coach permissions
  */
 export const assign = mutation({
   args: {
     userId: v.string(),
     projectId: v.id('projects'),
-    role: v.union(v.literal('coach'), v.literal('default')),
+    role: v.union(v.literal('coach'), v.literal('member')),
   },
   returns: v.id('userToProject'),
   handler: async (ctx, args) => {
-    // Check if assignment already exists
+    const currentUserId = await requireAuth(ctx);
+    await assertUserIsCoach(ctx, currentUserId, args.projectId);
+
     const existing = await ctx.db
       .query('userToProject')
       .withIndex('by_userId_and_projectId', (q) =>
@@ -33,7 +37,7 @@ export const assign = mutation({
 });
 
 /**
- * Get all users assigned to a project
+ * Get all users assigned to a project with their user information
  */
 export const listUsersForProject = query({
   args: {
@@ -44,14 +48,43 @@ export const listUsersForProject = query({
       _id: v.id('userToProject'),
       userId: v.string(),
       projectId: v.id('projects'),
-      role: v.union(v.literal('coach'), v.literal('default')),
+      role: v.union(v.literal('coach'), v.literal('member')),
+      user: v.union(
+        v.object({
+          _id: v.id('users'),
+          tokenIdentifier: v.string(),
+          firstName: v.optional(v.string()),
+          lastName: v.optional(v.string()),
+          email: v.optional(v.string()),
+          profilePictureUrl: v.optional(v.string()),
+        }),
+        v.null()
+      ),
     })
   ),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const assignments = await ctx.db
       .query('userToProject')
       .withIndex('by_projectId', (q) => q.eq('projectId', args.projectId))
       .collect();
+
+    const result = [];
+    for (const assignment of assignments) {
+      const user = await ctx.db
+        .query('users')
+        .withIndex('by_tokenIdentifier', (q) => q.eq('tokenIdentifier', assignment.userId))
+        .unique();
+
+      result.push({
+        _id: assignment._id,
+        userId: assignment.userId,
+        projectId: assignment.projectId,
+        role: assignment.role,
+        user: user ?? null,
+      });
+    }
+
+    return result;
   },
 });
 
@@ -67,7 +100,7 @@ export const listCoachesForProject = query({
       _id: v.id('userToProject'),
       userId: v.string(),
       projectId: v.id('projects'),
-      role: v.union(v.literal('coach'), v.literal('default')),
+      role: v.union(v.literal('coach'), v.literal('member')),
     })
   ),
   handler: async (ctx, args) => {
@@ -82,15 +115,19 @@ export const listCoachesForProject = query({
 
 /**
  * Update user's role in a project
+ * Requires coach permissions
  */
 export const updateRole = mutation({
   args: {
     userId: v.string(),
     projectId: v.id('projects'),
-    role: v.union(v.literal('coach'), v.literal('default')),
+    role: v.union(v.literal('coach'), v.literal('member')),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const currentUserId = await requireAuth(ctx);
+    await assertUserIsCoach(ctx, currentUserId, args.projectId);
+
     const assignment = await ctx.db
       .query('userToProject')
       .withIndex('by_userId_and_projectId', (q) =>
@@ -111,6 +148,7 @@ export const updateRole = mutation({
 
 /**
  * Remove a user from a project
+ * Requires coach permissions
  */
 export const remove = mutation({
   args: {
@@ -119,6 +157,9 @@ export const remove = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const currentUserId = await requireAuth(ctx);
+    await assertUserIsCoach(ctx, currentUserId, args.projectId);
+
     const assignment = await ctx.db
       .query('userToProject')
       .withIndex('by_userId_and_projectId', (q) =>
@@ -177,3 +218,40 @@ export const isCoach = query({
   },
 });
 
+/**
+ * Get the current user's role in a project
+ * Returns null if the user is not in the project
+ */
+export const getUserRole = query({
+  args: {
+    projectId: v.id('projects'),
+  },
+  returns: v.union(v.literal('coach'), v.literal('member'), v.null()),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.tokenIdentifier) {
+      return null;
+    }
+
+    const assignment = await ctx.db
+      .query('userToProject')
+      .withIndex('by_userId_and_projectId', (q) =>
+        q.eq('userId', identity.tokenIdentifier).eq('projectId', args.projectId)
+      )
+      .unique();
+
+    if (!assignment) {
+      return null;
+    }
+
+    return assignment.role as 'coach' | 'member';
+  },
+});
+
+
+export const getUserTokenIdentifier = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    return identity?.tokenIdentifier ?? null;
+  },
+});

@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireAuth, assertUserIsCoach } from './permissions';
 
 /**
  * Create a new project
@@ -21,11 +22,11 @@ export const create = mutation({
       throw new Error('User not authenticated');
     }
 
-    // Automatically assign creator as a default member
+    // Automatically assign creator as a coach
     await ctx.db.insert('userToProject', {
       userId: userId?.tokenIdentifier,
       projectId,
-      role: 'default',
+      role: 'coach',
     });
 
     return projectId;
@@ -66,7 +67,7 @@ export const listForUser = query({
       _creationTime: v.number(),
       name: v.string(),
       description: v.string(),
-      role: v.union(v.literal('coach'), v.literal('default')),
+      role: v.union(v.literal('coach'), v.literal('member')),
     })
   ),
   handler: async (ctx, args) => {
@@ -106,7 +107,8 @@ export const list = query({
 });
 
 /**
- * Update a project
+ * Update a project (name and description)
+ * Requires coach permissions
  */
 export const update = mutation({
   args: {
@@ -116,6 +118,9 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const currentUserId = await requireAuth(ctx);
+    await assertUserIsCoach(ctx, currentUserId, args.projectId);
+
     const { projectId, ...updates } = args;
     await ctx.db.patch(projectId, updates);
     return null;

@@ -1,8 +1,5 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { useConvexMutation } from '@convex-dev/react-query';
-import { api } from '@convex/_generated/api';
-import type { Id } from '@convex/_generated/dataModel';
 
 export type TaskNodeData = {
   label: string;
@@ -11,6 +8,7 @@ export type TaskNodeData = {
   assignedTo?: string;
   dueDate?: number;
   priority?: 'low' | 'medium' | 'high';
+  onUpdate?: (data: TaskNodeData) => void;
 };
 
 const statusColors = {
@@ -28,19 +26,17 @@ const priorityColors = {
 
 export const TaskNode = memo(({ data, id }: NodeProps) => {
   const taskData = data as TaskNodeData;
-  const updateData = useConvexMutation(api.tasks.updateData);
 
   const status = taskData.status || 'todo';
   const priority = taskData.priority || 'medium';
 
   const handleStatusChange = (newStatus: typeof status) => {
-    updateData({
-      taskId: id as Id<'tasks'>,
-      data: {
+    if (taskData.onUpdate) {
+      taskData.onUpdate({
         ...taskData,
         status: newStatus,
-      },
-    });
+      });
+    }
   };
 
   return (

@@ -77,12 +77,21 @@ export default defineSchema({
     .index('by_target', ['target'])
     .index('by_project_and_source', ['projectId', 'source']),
 
+  users: defineTable({
+    tokenIdentifier: v.string(),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    profilePictureUrl: v.optional(v.string()),
+  })
+    .index('by_tokenIdentifier', ['tokenIdentifier']),
+
   userToProject: defineTable({
     userId: v.string(),
     projectId: v.id('projects'),
     role: v.union(
       v.literal('coach'),
-      v.literal('default')
+      v.literal('member')
     ),
   })
     .index('by_userId', ['userId'])

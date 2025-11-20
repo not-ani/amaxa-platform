@@ -7,12 +7,9 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { memo } from 'react';
-import { getRouteApi, Link } from '@tanstack/react-router';
-import type { Id } from '@convex/_generated/dataModel';
+import { Link } from '@tanstack/react-router';
 
-
-export const NavProjects = memo(({ projects, projectId }: { projects: { name: string; url: string; icon: LucideIcon }[] , projectId: Id<'projects'> }) => {
-
+export const NavProjects = memo(({ projects }: { projects: { name: string; url: string; icon: LucideIcon }[] }) => {
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Projects</SidebarGroupLabel>

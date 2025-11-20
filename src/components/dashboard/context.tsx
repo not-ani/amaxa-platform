@@ -8,12 +8,16 @@ interface Project {
   name: string;
 }
 
+export type UserRole = 'coach' | 'member' | null;
+
 export const DashboardContext = createContext<{
   project: Project;
+  userRole: UserRole;
 }>({
   project: {
     name: '',
   },
+  userRole: null,
 });
 
 export const useDashboardContext = () => {
@@ -22,7 +26,16 @@ export const useDashboardContext = () => {
 
 export const DashboardProvider = ({ children, projectId }: { children: React.ReactNode, projectId: Id<'projects'> }) => {
   const { data: project } = useSuspenseQuery(convexQuery(api.projects.get, { projectId }));
+  const { data: userRole } = useSuspenseQuery(convexQuery(api.userToProject.getUserRole, { projectId }));
+  
   if (!project) return <div>Project not found</div>;
 
-  return <DashboardContext.Provider value={{ project: { name: project.name }}}>{children}</DashboardContext.Provider>;
+  return (
+    <DashboardContext.Provider value={{ 
+      project: { name: project.name },
+      userRole: userRole ?? null
+    }}>
+      {children}
+    </DashboardContext.Provider>
+  );
 };

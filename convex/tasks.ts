@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireAuth, assertUserInProject } from './permissions';
 
 // Validator for task data
 const taskDataValidator = v.object({
@@ -37,6 +38,9 @@ export const create = mutation({
   },
   returns: v.id('tasks'),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    await assertUserInProject(ctx, userId, args.projectId);
+
     const type = args.type.trim() === '' ? 'default' : args.type;
     
     return await ctx.db.insert('tasks', {
@@ -113,6 +117,13 @@ export const updatePosition = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new Error('Task not found');
+    }
+    await assertUserInProject(ctx, userId, task.projectId);
+
     await ctx.db.patch(args.taskId, {
       position: args.position,
     });
@@ -130,6 +141,13 @@ export const updateData = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new Error('Task not found');
+    }
+    await assertUserInProject(ctx, userId, task.projectId);
+
     await ctx.db.patch(args.taskId, {
       data: args.data,
     });
@@ -151,6 +169,13 @@ export const updateStyle = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new Error('Task not found');
+    }
+    await assertUserInProject(ctx, userId, task.projectId);
+
     await ctx.db.patch(args.taskId, {
       style: args.style,
     });
@@ -167,6 +192,13 @@ export const remove = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new Error('Task not found');
+    }
+    await assertUserInProject(ctx, userId, task.projectId);
+
     // Delete edges connected to this task
     const outgoingEdges = await ctx.db
       .query('edges')
@@ -205,6 +237,18 @@ export const batchUpdatePositions = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    
+    // Verify all tasks belong to projects the user has access to
+    for (const update of args.updates) {
+      const task = await ctx.db.get(update.taskId);
+      if (!task) {
+        throw new Error(`Task ${update.taskId} not found`);
+      }
+      await assertUserInProject(ctx, userId, task.projectId);
+    }
+
+    // Update all positions
     for (const update of args.updates) {
       await ctx.db.patch(update.taskId, {
         position: update.position,

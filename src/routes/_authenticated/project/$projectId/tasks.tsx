@@ -3,25 +3,28 @@ import { Button } from '@/components/ui/button';
 import { api } from '@convex/_generated/api';
 import { createFileRoute } from '@tanstack/react-router';
 import type { Id } from '@convex/_generated/dataModel';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { memo, useCallback, useMemo } from 'react';
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query';
+import { memo, useCallback, useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  useNodesState,
+  useEdgesState,
+  addEdge,
   type Node,
   type Edge,
   type Connection,
   type NodeTypes,
   type OnNodesChange,
   type OnEdgesChange,
-  type NodeChange,
-  type EdgeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import xyFlow from '@xyflow/react/dist/base.css?url';
 import { TaskNode } from '@/components/dashboard/sidebar/TaskNode';
+import type { TaskNodeData } from '@/components/dashboard/sidebar/TaskNode';
+import { useDashboardContext } from '@/components/dashboard/context';
 
 export const Route = createFileRoute('/_authenticated/project/$projectId/tasks')({
   loader: async ({ context, params }) => {
@@ -45,77 +48,54 @@ const nodeTypes: NodeTypes = {
 
 function RouteComponent() {
   const projectId = Route.useParams().projectId as Id<'projects'>;
+  const queryClient = useQueryClient();
+  const { userRole } = useDashboardContext();
 
   const { data: project } = useSuspenseQuery(convexQuery(api.projects.get, { projectId }));
   const { data: convexNodes } = useSuspenseQuery(convexQuery(api.tasks.listForProject, { projectId }));
   const { data: convexEdges } = useSuspenseQuery(convexQuery(api.edges.listForProject, { projectId }));
 
-  const createTask = useConvexMutation(api.tasks.create);
-  const updatePosition = useConvexMutation(api.tasks.updatePosition);
-  const removeTask = useConvexMutation(api.tasks.remove);
-  const createEdge = useConvexMutation(api.edges.create);
-  const removeEdge = useConvexMutation(api.edges.remove);
+  const replaceGraph = useConvexMutation(api.graph.replaceProjectGraph);
 
-  const nodes = useMemo(() => (convexNodes || []) as Node[], [convexNodes]);
-  const edges = useMemo(() => (convexEdges || []) as Edge[], [convexEdges]);
+  // Initialize local state from server data
+  const initialNodes = useMemo(() => (convexNodes || []) as Node[], [convexNodes]);
+  const initialEdges = useMemo(() => (convexEdges || []) as Edge[], [convexEdges]);
 
-  // Stable objects to prevent unnecessary re-renders
-  const layoutStyle = useMemo(
-    () => ({ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }),
-    [],
-  );
+  // Use React Flow's state management hooks
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Sync local state when server data changes
+  useEffect(() => {
+    if (convexNodes) {
+      setNodes(convexNodes as Node[]);
+    }
+  }, [convexNodes, setNodes]);
+
+  useEffect(() => {
+    if (convexEdges) {
+      setEdges(convexEdges as Edge[]);
+    }
+  }, [convexEdges, setEdges]);
+
+  // Local-only handlers (no mutations)
   const onConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
-        createEdge({
-          projectId,
-          source: connection.source as Id<'tasks'>,
-          target: connection.target as Id<'tasks'>,
-          type: 'default',
-          sourceHandle: connection.sourceHandle ?? undefined,
-          targetHandle: connection.targetHandle ?? undefined,
-        });
+        setEdges((eds) => addEdge(connection, eds));
       }
     },
-    [createEdge, projectId],
+    [setEdges],
   );
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      updatePosition({
-        taskId: node.id as Id<'tasks'>,
-        position: node.position,
-      });
+      // Position updates are handled by onNodesChange, but we can explicitly update if needed
+      setNodes((nds) =>
+        nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
+      );
     },
-    [updatePosition],
-  );
-
-  const onNodesChange: OnNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      const removedNodes = changes.filter((change) => change.type === 'remove');
-      if (removedNodes.length > 0) {
-        removedNodes.forEach((change) => {
-          if (change.type === 'remove') {
-            removeTask({ taskId: change.id as Id<'tasks'> });
-          }
-        });
-      }
-    },
-    [removeTask],
-  );
-
-  const onEdgesChange: OnEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      const removedEdges = changes.filter((change) => change.type === 'remove');
-      if (removedEdges.length > 0) {
-        removedEdges.forEach((change) => {
-          if (change.type === 'remove') {
-            removeEdge({ edgeId: change.id as Id<'edges'> });
-          }
-        });
-      }
-    },
-    [removeEdge],
+    [setNodes],
   );
 
   const addNewTask = useCallback(() => {
@@ -124,32 +104,102 @@ function RouteComponent() {
       y: Math.random() * 500,
     };
 
-    createTask({
-      projectId,
+    const newNode: Node = {
+      id: crypto.randomUUID(),
       type: 'task',
       position,
       data: {
         label: `Task ${nodes.length + 1}`,
         status: 'todo',
         priority: 'medium',
-      },
+      } as TaskNodeData,
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+  }, [nodes.length, setNodes]);
+
+  // Save handler - replaces entire graph
+  const handleSave = useCallback(async () => {
+    await replaceGraph({
+      projectId,
+      nodes: nodes.map(({ id, type, position, data, width, height }) => ({
+        id,
+        type: type || 'task',
+        position,
+        data: data as TaskNodeData,
+        width,
+        height,
+      })),
+      edges: edges.map(({ source, target, type, sourceHandle, targetHandle, label, animated }) => ({
+        source,
+        target,
+        type: type || 'default',
+        sourceHandle: sourceHandle ?? undefined,
+        targetHandle: targetHandle ?? undefined,
+        label: typeof label === 'string' ? label : undefined,
+        animated,
+      })),
     });
-  }, [createTask, projectId, nodes.length]);
+
+    // Invalidate queries to refresh data
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: convexQuery(api.tasks.listForProject, { projectId }).queryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: convexQuery(api.edges.listForProject, { projectId }).queryKey,
+      }),
+    ]);
+  }, [nodes, edges, projectId, replaceGraph, queryClient]);
+
+  // Inject onUpdate callback into node data for TaskNode
+  const nodesForRender = useMemo(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        data: {
+          ...(n.data as TaskNodeData),
+          onUpdate: (nextData: TaskNodeData) => {
+            setNodes((nds) =>
+              nds.map((x) => (x.id === n.id ? { ...x, data: nextData } : x))
+            );
+          },
+        },
+      })),
+    [nodes, setNodes],
+  );
+
+  // Stable objects to prevent unnecessary re-renders
+  const layoutStyle = useMemo(
+    () => ({ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' as const }),
+    [],
+  );
 
   return (
     <div style={layoutStyle}>
       <div className="flex items-center justify-between px-6 py-4 border-b">
         <h1 className="text-2xl font-bold">{project?.name ?? 'Project'}</h1>
-        <Button
-        type='button'
-          onClick={addNewTask}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Add Task
-        </Button>
+        {userRole && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={addNewTask}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Add Task
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              Save
+            </Button>
+          </div>
+        )}
       </div>
       <TasksGraph
-        nodes={nodes}
+        nodes={nodesForRender}
         edges={edges}
         onConnect={onConnect}
         onNodesChange={onNodesChange}

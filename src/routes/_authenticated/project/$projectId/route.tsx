@@ -3,8 +3,17 @@ import { Id } from '@convex/_generated/dataModel';
 import { DashboardProvider } from '@/components/dashboard/context';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/dashboard/sidebar/app-sidebar';
+import { convexQuery } from '@convex-dev/react-query';
+import { api } from '@convex/_generated/api';
 
 export const Route = createFileRoute('/_authenticated/project/$projectId')({
+  loader: async ({ context, params }) => {
+    const projectId = params.projectId as Id<'projects'>;
+    await Promise.all([
+      context.queryClient.ensureQueryData(convexQuery(api.projects.get, { projectId })),
+      context.queryClient.ensureQueryData(convexQuery(api.userToProject.getUserRole, { projectId })),
+    ]);
+  },
   component: RouteComponent,
 });
 

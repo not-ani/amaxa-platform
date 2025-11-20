@@ -9,10 +9,14 @@
  */
 
 import type * as edges from "../edges.js";
+import type * as graph from "../graph.js";
+import type * as migrations from "../migrations.js";
+import type * as permissions from "../permissions.js";
 import type * as projects from "../projects.js";
 import type * as reactFlowExample from "../reactFlowExample.js";
 import type * as tasks from "../tasks.js";
 import type * as userToProject from "../userToProject.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -30,10 +34,14 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   edges: typeof edges;
+  graph: typeof graph;
+  migrations: typeof migrations;
+  permissions: typeof permissions;
   projects: typeof projects;
   reactFlowExample: typeof reactFlowExample;
   tasks: typeof tasks;
   userToProject: typeof userToProject;
+  users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

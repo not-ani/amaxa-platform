@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireAuth, assertUserInProject } from './permissions';
 
 /**
  * Create a new edge (connection between tasks)
@@ -17,6 +18,9 @@ export const create = mutation({
   },
   returns: v.id('edges'),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    await assertUserInProject(ctx, userId, args.projectId);
+
     return await ctx.db.insert('edges', {
       projectId: args.projectId,
       source: args.source,
@@ -89,6 +93,13 @@ export const updateStyle = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const edge = await ctx.db.get(args.edgeId);
+    if (!edge) {
+      throw new Error('Edge not found');
+    }
+    await assertUserInProject(ctx, userId, edge.projectId);
+
     await ctx.db.patch(args.edgeId, {
       style: args.style,
     });
@@ -106,6 +117,13 @@ export const updateLabel = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const edge = await ctx.db.get(args.edgeId);
+    if (!edge) {
+      throw new Error('Edge not found');
+    }
+    await assertUserInProject(ctx, userId, edge.projectId);
+
     await ctx.db.patch(args.edgeId, {
       label: args.label,
     });
@@ -123,6 +141,13 @@ export const toggleAnimation = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const edge = await ctx.db.get(args.edgeId);
+    if (!edge) {
+      throw new Error('Edge not found');
+    }
+    await assertUserInProject(ctx, userId, edge.projectId);
+
     await ctx.db.patch(args.edgeId, {
       animated: args.animated,
     });
@@ -139,6 +164,13 @@ export const remove = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    const edge = await ctx.db.get(args.edgeId);
+    if (!edge) {
+      throw new Error('Edge not found');
+    }
+    await assertUserInProject(ctx, userId, edge.projectId);
+
     await ctx.db.delete(args.edgeId);
     return null;
   },
@@ -154,6 +186,24 @@ export const removeAllBetweenTasks = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const userId = await requireAuth(ctx);
+    
+    // Verify both tasks exist and user has access
+    const sourceTask = await ctx.db.get(args.source);
+    if (!sourceTask) {
+      throw new Error('Source task not found');
+    }
+    await assertUserInProject(ctx, userId, sourceTask.projectId);
+
+    const targetTask = await ctx.db.get(args.target);
+    if (!targetTask) {
+      throw new Error('Target task not found');
+    }
+    // Verify both tasks are in the same project
+    if (sourceTask.projectId !== targetTask.projectId) {
+      throw new Error('Tasks must be in the same project');
+    }
+
     const edges = await ctx.db
       .query('edges')
       .withIndex('by_source', (q) => q.eq('source', args.source))
