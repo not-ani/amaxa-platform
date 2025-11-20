@@ -1,6 +1,5 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
 import { getAuth, getSignInUrl } from '@workos/authkit-tanstack-react-start';
-import { useSyncUser } from '@/hooks/use-sync-user';
 
 export const Route = createFileRoute('/_authenticated')({
   loader: async ({ location }) => {
@@ -11,10 +10,5 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ href });
     }
   },
-  component: AuthenticatedLayout,
+  component: () => <Outlet />,
 });
-
-function AuthenticatedLayout() {
-  useSyncUser();
-  return <Outlet />;
-}

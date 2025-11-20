@@ -37,54 +37,17 @@ export const assign = mutation({
 });
 
 /**
- * Get all users assigned to a project with their user information
+ * Get all users assigned to a project
  */
 export const listUsersForProject = query({
   args: {
     projectId: v.id('projects'),
   },
-  returns: v.array(
-    v.object({
-      _id: v.id('userToProject'),
-      userId: v.string(),
-      projectId: v.id('projects'),
-      role: v.union(v.literal('coach'), v.literal('member')),
-      user: v.union(
-        v.object({
-          _id: v.id('users'),
-          tokenIdentifier: v.string(),
-          firstName: v.optional(v.string()),
-          lastName: v.optional(v.string()),
-          email: v.optional(v.string()),
-          profilePictureUrl: v.optional(v.string()),
-        }),
-        v.null()
-      ),
-    })
-  ),
   handler: async (ctx, args) => {
-    const assignments = await ctx.db
+    return await ctx.db
       .query('userToProject')
       .withIndex('by_projectId', (q) => q.eq('projectId', args.projectId))
       .collect();
-
-    const result = [];
-    for (const assignment of assignments) {
-      const user = await ctx.db
-        .query('users')
-        .withIndex('by_tokenIdentifier', (q) => q.eq('tokenIdentifier', assignment.userId))
-        .unique();
-
-      result.push({
-        _id: assignment._id,
-        userId: assignment.userId,
-        projectId: assignment.projectId,
-        role: assignment.role,
-        user: user ?? null,
-      });
-    }
-
-    return result;
   },
 });
 
